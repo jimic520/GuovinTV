@@ -12,7 +12,7 @@ socketio.init_app(app, cors_allowed_origins='*')
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('./index.html')
 
 
 @socketio.on('connect')
