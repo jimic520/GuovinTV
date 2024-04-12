@@ -1,12 +1,11 @@
+import traceback
+
+import requests
+
 try:
     import user_config as config
 except ImportError:
     import config
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium_stealth import stealth
 import asyncio
 from bs4 import BeautifulSoup
 from utils import (
@@ -25,39 +24,26 @@ import logging
 import os
 from tqdm import tqdm
 
-logging.basicConfig(
-    filename="result_new.log",
-    filemode="a",
-    format="%(message)s",
-    level=logging.INFO,
-    encoding="utf-8",
-)
+# logging.basicConfig(
+#     filename="result_new.log",
+#     filemode="a",
+#     format="%(message)s",
+#     level=logging.INFO,
+#     encoding='utf-8'
+# )
+logger = logging.getLogger('my_logger')
+logger.setLevel(logging.INFO)
+file_handler = logging.FileHandler("result_new.log", encoding='utf-8')
+file_handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(message)s')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 
 class UpdateSource:
 
-    def setup_driver(self):
-        options = webdriver.ChromeOptions()
-        options.add_argument("start-maximized")
-        options.add_argument("--headless")
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option("useAutomationExtension", False)
-        options.add_argument("blink-settings=imagesEnabled=false")
-        options.add_argument("--log-level=3")
-        driver = webdriver.Chrome(options=options)
-        stealth(
-            driver,
-            languages=["en-US", "en"],
-            vendor="Google Inc.",
-            platform="Win32",
-            webgl_vendor="Intel Inc.",
-            renderer="Intel Iris OpenGL Engine",
-            fix_hairline=True,
-        )
-        return driver
-
-    def __init__(self):
-        self.driver = self.setup_driver()
+    def __init__(self, callback=None):
+        self.callback = callback
 
     async def visitPage(self, channelItems):
         total_channels = sum(len(channelObj) for _, channelObj in channelItems.items())
@@ -77,13 +63,25 @@ class UpdateSource:
                 for page in range(1, pageNum + 1):
                     try:
                         page_url = f"https://www.foodieguide.com/iptvsearch/?page={page}&s={name}"
-                        self.driver.get(page_url)
-                        WebDriverWait(self.driver, 10).until(
-                            EC.presence_of_element_located(
-                                (By.CSS_SELECTOR, "div.tables")
-                            )
-                        )
-                        soup = BeautifulSoup(self.driver.page_source, "html.parser")
+                        headers = {
+                            'Content-Type': 'applicationx-www-form-urlencoded;charset=UTF-8',
+                            # 设置请求头中的Content-Type为JSON格式
+                            'User-Agent': 'Mozilla5.0 (Linux; Android 8.0.0; SM-G955U BuildR16NW) AppleWebKit537.36 (KHTML, like Gecko) Chrome116.0.0.0 Mobile Safari537.36',
+                            'Referer': 'httpswww.foodieguide.comiptvsearch',
+                            'Origin': 'httpswww.foodieguide.com',
+                            'Sec-Fetch-Mode': 'navigate',
+                            'Sec-Ch-Ua-Platform': 'Android',
+                            'Sec-Ch-Ua-Mobile': '1',
+                            'Sec-Ch-Ua': 'Not_A Brand;v=8, Chromium;v=120, Google Chrome;v=120',
+                            'Sec-Fetch-Dest': 'document',
+                            'Sec-Fetch-Site': 'same-origin',
+                            'Sec-Fetch-User': '1',
+                            'Upgrade-Insecure-Requests': '1',
+                            'Accept-Language': 'zh-CN,zh;q=0.9'
+                        }
+                        response = requests.get(page_url, headers=headers)
+                        response.encoding = "UTF-8"
+                        soup = BeautifulSoup(response.text, "html.parser")
                         tables_div = soup.find("div", class_="tables")
                         results = (
                             tables_div.find_all("div", class_="result")
@@ -94,26 +92,27 @@ class UpdateSource:
                             try:
                                 url, date, resolution = getUrlInfo(result)
                                 if (
-                                    url
-                                    and checkUrlIPVType(url)
-                                    and checkByDomainBlacklist(url)
-                                    and checkByURLKeywordsBlacklist(url)
+                                        url
+                                        and checkUrlIPVType(url)
+                                        and checkByDomainBlacklist(url)
+                                        and checkByURLKeywordsBlacklist(url)
                                 ):
                                     infoList.append((url, date, resolution))
                             except Exception as e:
                                 print(f"Error on result {result}: {e}")
                                 continue
                     except Exception as e:
+                        traceback.print_exc()
                         print(f"Error on page {page}: {e}")
                         continue
                 try:
                     sorted_data = await compareSpeedAndResolution(infoList)
                     if sorted_data:
                         channelUrls[name] = (
-                            getTotalUrls(sorted_data) or channelObj[name]
+                                getTotalUrls(sorted_data) or channelObj[name]
                         )
                         for (url, date, resolution), response_time in sorted_data:
-                            logging.info(
+                            logger.info(
                                 f"Name: {name}, URL: {url}, Date: {date}, Resolution: {resolution}, Response Time: {response_time}ms"
                             )
                     else:
@@ -129,9 +128,9 @@ class UpdateSource:
 
     def main(self):
         asyncio.run(self.visitPage(getChannelItems()))
-        for handler in logging.root.handlers[:]:
+        for handler in logger.handlers:
             handler.close()
-            logging.root.removeHandler(handler)
+            logger.removeHandler(handler)
         user_final_file = getattr(config, "final_file", "result.txt")
         user_log_file = (
             "user_result.log" if os.path.exists("user_config.py") else "result.log"
@@ -141,4 +140,5 @@ class UpdateSource:
         print(f"Update completed! Please check the {user_final_file} file!")
 
 
-UpdateSource().main()
+if __name__ == '__main__':
+    UpdateSource().main()
