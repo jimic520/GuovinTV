@@ -2,7 +2,8 @@ import os
 
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
-
+from gevent import pywsgi
+from geventwebsocket.handler import WebSocketHandler
 from main import UpdateSource
 
 app = Flask(__name__)
@@ -34,4 +35,5 @@ def handle_tv_task():
 
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=8989, debug=False)
+    server = pywsgi.WSGIServer(('0.0.0.0', 8989), socketio, handler_class=WebSocketHandler)
+    server.serve_forever()
