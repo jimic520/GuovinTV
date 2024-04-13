@@ -88,8 +88,10 @@ def getUrlInfo(result):
     """
     url = date = resolution = None
     result_div = [div for div in result.children if div.name == "div"]
-    if 1 < len(result_div):
-        channel_text = result_div[1].get_text(strip=True)
+    for result_sub_div in result_div:
+        if "copyto(" not in str(result_sub_div):
+            continue
+        channel_text = result_sub_div.get_text(strip=True)
         url_match = re.search(
             r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
             channel_text,
@@ -106,6 +108,7 @@ def getUrlInfo(result):
                     else None
                 ),
             )
+        break
     return url, date, resolution
 
 
