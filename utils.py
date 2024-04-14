@@ -89,6 +89,9 @@ def getUrlInfo(result):
     url = date = resolution = None
     result_div = [div for div in result.children if div.name == "div"]
     for result_sub_div in result_div:
+        img_tags = result_sub_div.find_all("img")
+        if not img_tags:
+            continue
         if "copyto(" not in str(result_sub_div):
             continue
         channel_text = result_sub_div.get_text(strip=True)
@@ -155,9 +158,9 @@ async def compareSpeedAndResolution(infoList):
     resolution_weight = getattr(config, "resolution_weight", default_resolution_weight)
     # Check if weights are valid
     if not (
-        0 <= response_time_weight <= 1
-        and 0 <= resolution_weight <= 1
-        and response_time_weight + resolution_weight == 1
+            0 <= response_time_weight <= 1
+            and 0 <= resolution_weight <= 1
+            and response_time_weight + resolution_weight == 1
     ):
         response_time_weight = default_response_time_weight
         resolution_weight = default_resolution_weight
@@ -166,8 +169,8 @@ async def compareSpeedAndResolution(infoList):
         (_, _, resolution), response_time = item
         resolution_value = extract_resolution(resolution) if resolution else 0
         return (
-            -(response_time_weight * response_time)
-            + resolution_weight * resolution_value
+                -(response_time_weight * response_time)
+                + resolution_weight * resolution_value
         )
 
     sorted_res = sorted(valid_responses, key=combined_key, reverse=True)
@@ -181,9 +184,9 @@ def filterByDate(data):
     default_recent_days = 60
     use_recent_days = getattr(config, "recent_days", 60)
     if (
-        not isinstance(use_recent_days, int)
-        or use_recent_days <= 0
-        or use_recent_days > 365
+            not isinstance(use_recent_days, int)
+            or use_recent_days <= 0
+            or use_recent_days > 365
     ):
         use_recent_days = default_recent_days
     start_date = datetime.datetime.now() - datetime.timedelta(days=use_recent_days)
@@ -265,3 +268,13 @@ def filterUrlsByPatterns(urls):
     urls = [url for url in urls if checkByDomainBlacklist(url)]
     urls = [url for url in urls if checkByURLKeywordsBlacklist(url)]
     return urls
+
+
+def is_match_url(url):
+    url_match = re.search(
+        r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+        url,
+    )
+    if url_match:
+        return True, url_match.group()
+    return False, None

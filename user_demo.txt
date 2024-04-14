@@ -1,4 +1,4 @@
-﻿上海视频,#genre#
+﻿上海频道,#genre#
 上海新闻综合,http://php.jdshipin.com:8880/bst.php?id=shxwzh
 上海新闻综合,https://cntv.lat/tv/live.php?auth=231110&id=shxwzh
 上视新闻,http://xiaozeng.hk3.345888.xyz.cdn.cloudflare.net/ww/bestv.php?id=xwzhhd8m/8000000

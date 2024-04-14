@@ -24,3 +24,13 @@ recent_days = 30
 ipv_type = "ipv4"
 domain_blacklist = ["epg.pw"]
 url_keywords_blacklist = []
+# crawl_type的默认值为1-只爬取foodieguide网站；2-只爬取crawl_urls中配置的网站；3-全部
+crawl_type = "1"
+# 收集其他大佬url中的直播源
+crawl_urls = []
+# ftp上传result.txt文件
+ftp_host = ""
+ftp_port = ""
+ftp_user = ""
+ftp_pass = ""
+ftp_remote_file = ""
