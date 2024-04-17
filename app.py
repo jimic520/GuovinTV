@@ -15,8 +15,12 @@ app.config['run_thread'] = None
 
 @app.route('/')
 def index():
-    us = UpdateSource().main()
-    return redirect('/tv')
+    run_thread = app.config['run_thread']
+    if run_thread is None or not run_thread.is_alive():
+        us = UpdateSource()
+        app.config['run_thread'] = threading.Thread(target=us.main)
+        app.config['run_thread'].start()
+    return "正在收集中，请稍候..."
 
 
 @app.route('/tv')
