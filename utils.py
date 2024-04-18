@@ -128,18 +128,18 @@ async def getSpeed(url):
     """
     Get the speed of the url
     """
-    try:
-        startTime = int(round(time.time() * 1000))
-        response = urllib.request.urlopen(url, timeout=5)
-        code = response.getcode()
-        if code == 200:
-            endTime = int(round(time.time() * 1000))
-            useTime = endTime - startTime
-            return int(useTime)
+    async with aiohttp.ClientSession() as session:
+        start = time.time()
+        try:
+            async with session.get(url, timeout=5) as response:
+                resStatus = response.status
+        except:
+            return float("inf")
+        end = time.time()
+        if resStatus == 200:
+            return int(round((end - start) * 1000))
         else:
             return float("inf")
-    except:
-        return float("inf")
 
 
 async def compareSpeedAndResolution(infoList):
