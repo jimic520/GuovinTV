@@ -121,7 +121,8 @@ async def getSpeed(url):
     """
     try:
         startTime = int(round(time.time() * 1000))
-        code = urllib.request.urlopen(url).getcode()
+        response = urllib.request.urlopen(url, timeout=5)
+        code = response.getcode()
         if code == 200:
             endTime = int(round(time.time() * 1000))
             useTime = endTime - startTime
