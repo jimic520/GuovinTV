@@ -25,7 +25,7 @@ ipv_type = "all"
 domain_blacklist = ["epg.pw"]
 url_keywords_blacklist = ["https://live.v1.mk/api/bestv.php?id=wxtyhd8m/8000000"]
 # crawl_type的默认值为1-只爬取foodieguide网站；2-只爬取crawl_urls中配置的网站；3-全部
-crawl_type = "3"
+crawl_type = "2"
 # 收集其他大佬url中的直播源
 crawl_urls = ["https://mirror.ghproxy.com/raw.githubusercontent.com/tianya7981/jiekou/main/0406",
               "https://fanmingming.com/txt?url=https://live.fanmingming.com/tv/m3u/ipv6.m3u",
