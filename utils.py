@@ -94,13 +94,6 @@ def getUrlInfo(result):
             continue
         if "copyto(" not in str(result_sub_div):
             continue
-        copy_url_match = re.search(
-            r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
-            img_tags[0].get("onclick"),
-        )
-        if not copy_url_match:
-            continue
-        copy_url = copy_url_match.group().strip()
         channel_text = result_sub_div.get_text(strip=True)
         url_match = re.search(
             r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
@@ -108,8 +101,6 @@ def getUrlInfo(result):
         )
         if url_match:
             url = url_match.group()
-        if copy_url != url.strip():
-            continue
         info_text = result_div[-1].get_text(strip=True)
         if info_text:
             date, resolution = (
@@ -287,3 +278,12 @@ def is_match_url(url):
     if url_match:
         return True, url_match.group()
     return False, None
+
+
+def filter_CCTV_key(key: str):
+    if "cctv" not in key.lower():
+        return key
+    chinese_pattern = re.compile("[\u4e00-\u9fa5]+")  # 匹配中文字符的 Unicode 范围
+    filtered_text = chinese_pattern.sub('', key)  # 使用 sub 方法替换中文字符为空字符串
+    result = re.sub(r'\[\d+\*\d+\]', '', filtered_text)
+    return result.strip()
