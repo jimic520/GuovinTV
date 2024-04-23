@@ -110,10 +110,10 @@ class UpdateSource:
                             response = requests.get(page_url, headers=headers)
                             response.encoding = "UTF-8"
                             soup = BeautifulSoup(response.text, "html.parser")
-                            tables_div = soup.find("div", class_="tables")
+                            # tables_div = soup.find("div", class_="result")
                             results = (
-                                tables_div.find_all("div", class_="result")
-                                if tables_div
+                                soup.find_all("div", class_="result")
+                                if soup
                                 else []
                             )
                             for result in results:
