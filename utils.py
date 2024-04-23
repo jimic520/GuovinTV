@@ -92,7 +92,7 @@ def getUrlInfo(result):
         img_tags = result_sub_div.find_all("img")
         if not img_tags:
             continue
-        if "copyto(" not in str(result_sub_div):
+        if "copy" not in str(result_sub_div):
             continue
         channel_text = result_sub_div.get_text(strip=True)
         url_match = re.search(
