@@ -19,6 +19,7 @@ from utils import (
     checkByDomainBlacklist,
     checkByURLKeywordsBlacklist,
     filterUrlsByPatterns, is_match_url,
+    filter_CCTV_key
 )
 import logging
 import os
@@ -62,10 +63,13 @@ class UpdateSource:
                         key = parts[0].strip() \
                             .replace("「", "").replace("」", "") \
                             .replace("电视台", "").replace("IPV6", "").replace("IPV4", "")
+                        key = filter_CCTV_key(key)
                         value = parts[1].strip()
                         is_url, url = is_match_url(value)
                         if not is_url:
                             continue
+                        if " " in key:
+                            key = key.split(" ")[0]
                         if key in crawl_result_dict:
                             crawl_result_dict[key].append(url)
                         else:
