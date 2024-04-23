@@ -90,7 +90,7 @@ class UpdateSource:
                 if config.crawl_type in ["1", "3"]:
                     for page in range(1, pageNum + 1):
                         try:
-                            page_url = f"https://www.foodieguide.com/iptvsearch/?page={page}&s={name}"
+                            page_url = f"http://tonkiang.us/?page={page}&tv={name}"
                             headers = {
                                 'Content-Type': 'applicationx-www-form-urlencoded;charset=UTF-8',
                                 # 设置请求头中的Content-Type为JSON格式
