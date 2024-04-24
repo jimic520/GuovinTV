@@ -3,8 +3,8 @@ final_file = "user_result.txt"
 favorite_list = [
     "CCTV-3"
 ]
-favorite_page_num = 5
-default_page_num = 4
+favorite_page_num = 10
+default_page_num = 10
 urls_limit = 20
 response_time_weight = 0.5
 resolution_weight = 0.5
