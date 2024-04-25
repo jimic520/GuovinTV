@@ -29,7 +29,9 @@ crawl_type = "3"
 # 收集其他大佬url中的直播源
 crawl_urls = ["https://mirror.ghproxy.com/raw.githubusercontent.com/tianya7981/jiekou/main/0406",
               "https://fanmingming.com/txt?url=https://live.fanmingming.com/tv/m3u/ipv6.m3u",
-             "https://mirror.ghproxy.com/raw.githubusercontent.com/shidahuilang/shuyuan/shuyuan/iptv.txt"]
+              "https://fanmingming.com/txt?url=https://live.fanmingming.com/tv/m3u/ipv6Plus.m3u",
+              "http://home.jundie.top:81/Cat/tv/live.txt",
+ "https://mirror.ghproxy.com/raw.githubusercontent.com/shidahuilang/shuyuan/shuyuan/iptv.txt"]
 # ftp上传result.txt文件
 ftp_host = ""
 ftp_port = ""
