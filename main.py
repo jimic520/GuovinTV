@@ -52,7 +52,10 @@ class UpdateSource:
         crawl_result_dict = {}
         if config.crawl_type in ["2", "3"]:
             for conf_url in config.crawl_urls:
-                crawl_response = requests.get(conf_url.strip())
+                if conf_url.strip().startswith("http:"):
+                    crawl_response = requests.get(conf_url.strip(), verify=False)
+                else:
+                    crawl_response = requests.get(conf_url.strip())
                 crawl_response.encoding = 'utf-8'
                 if crawl_response.status_code != 200:
                     continue
@@ -90,13 +93,12 @@ class UpdateSource:
                 if config.crawl_type in ["1", "3"]:
                     for page in range(1, pageNum + 1):
                         try:
-                            page_url = f"http://tonkiang.us/?page={page}&tv={name}"
+                            page_url = f"http://tonkiang.us/?page={page}&ds={name}"
                             headers = {
                                 'Content-Type': 'applicationx-www-form-urlencoded;charset=UTF-8',
                                 # 设置请求头中的Content-Type为JSON格式
                                 'User-Agent': 'Mozilla5.0 (Linux; Android 8.0.0; SM-G955U BuildR16NW) AppleWebKit537.36 (KHTML, like Gecko) Chrome116.0.0.0 Mobile Safari537.36',
-                                'Referer': 'httpswww.foodieguide.comiptvsearch',
-                                'Origin': 'httpswww.foodieguide.com',
+                                'Host': 'tonkiang.us',
                                 'Sec-Fetch-Mode': 'navigate',
                                 'Sec-Ch-Ua-Platform': 'Android',
                                 'Sec-Ch-Ua-Mobile': '1',
