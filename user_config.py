@@ -23,7 +23,7 @@ resolution_weight = 0.5
 recent_days = 30
 ipv_type = "all"
 domain_blacklist = ["epg.pw"]
-url_keywords_blacklist = ["https://live.v1.mk/api/bestv.php?id=wxtyhd8m/8000000"]
+url_keywords_blacklist = ["https://live.v1.mk/api/bestv.php?id=wxtyhd8m/8000000", "http://111.126.92.29:808/hls/103/index.m3u8"]
 # crawl_type的默认值为1-只爬取foodieguide网站；2-只爬取crawl_urls中配置的网站；3-全部
 crawl_type = "3"
 # 收集其他大佬url中的直播源
