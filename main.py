@@ -1,3 +1,4 @@
+import re
 import traceback
 from ftplib import FTP
 import requests
@@ -41,6 +42,40 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 
+headers = {
+            'Content-Type': 'applicationx-www-form-urlencoded;charset=UTF-8',
+            # 设置请求头中的Content-Type为JSON格式
+            'User-Agent': 'Mozilla5.0 (Linux; Android 8.0.0; SM-G955U BuildR16NW) AppleWebKit537.36 (KHTML, like Gecko) Chrome116.0.0.0 Mobile Safari537.36',
+            'Host': 'tonkiang.us',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Ch-Ua-Platform': 'Android',
+            'Sec-Ch-Ua-Mobile': '1',
+            'Sec-Ch-Ua': 'Not_A Brand;v=8, Chromium;v=120, Google Chrome;v=120',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Site': 'same-origin',
+            'Sec-Fetch-User': '1',
+            'Upgrade-Insecure-Requests': '1',
+            'Accept-Language': 'zh-CN,zh;q=0.9'
+        }
+
+def get_search_key():
+    try:
+        url = "http://tonkiang.us/"
+        response = requests.get(url, headers=headers)
+        response.encoding = "UTF-8"
+        soup = BeautifulSoup(response.text, "html.parser")
+        pattern = re.compile(r'.*卫视')
+        a_tags = soup.find_all('a', string=pattern)
+        for a in a_tags:
+            match = re.search(r'\?(.*?)=', a.get('href'))
+            if not match:
+                continue
+            return match.group(1)
+            break
+    except Exception:
+        traceback.print_exc()
+        return "s"
+
 class UpdateSource:
 
     def __init__(self, callback=None):
@@ -77,7 +112,6 @@ class UpdateSource:
                             crawl_result_dict[key].append(url)
                         else:
                             crawl_result_dict[key] = [value]
-
         for cate, channelObj in channelItems.items():
             channelUrls = {}
             channelObjKeys = channelObj.keys()
@@ -91,33 +125,22 @@ class UpdateSource:
                 )
                 infoList = []
                 if config.crawl_type in ["1", "3"]:
+                    cookies = ""
+                    s_key = get_search_key()
                     for page in range(1, pageNum + 1):
                         try:
-                            page_url = f"http://tonkiang.us/?page={page}&ds={name}"
-                            headers = {
-                                'Content-Type': 'applicationx-www-form-urlencoded;charset=UTF-8',
-                                # 设置请求头中的Content-Type为JSON格式
-                                'User-Agent': 'Mozilla5.0 (Linux; Android 8.0.0; SM-G955U BuildR16NW) AppleWebKit537.36 (KHTML, like Gecko) Chrome116.0.0.0 Mobile Safari537.36',
-                                'Host': 'tonkiang.us',
-                                'Sec-Fetch-Mode': 'navigate',
-                                'Sec-Ch-Ua-Platform': 'Android',
-                                'Sec-Ch-Ua-Mobile': '1',
-                                'Sec-Ch-Ua': 'Not_A Brand;v=8, Chromium;v=120, Google Chrome;v=120',
-                                'Sec-Fetch-Dest': 'document',
-                                'Sec-Fetch-Site': 'same-origin',
-                                'Sec-Fetch-User': '1',
-                                'Upgrade-Insecure-Requests': '1',
-                                'Accept-Language': 'zh-CN,zh;q=0.9'
-                            }
-                            response = requests.get(page_url, headers=headers)
+                            page_url = f"http://tonkiang.us/?page={page}&{s_key}={name}"
+                            response = requests.get(page_url, headers=headers, cookies=cookies)
                             response.encoding = "UTF-8"
+                            cookies = response.cookies
                             soup = BeautifulSoup(response.text, "html.parser")
-                            # tables_div = soup.find("div", class_="result")
+                            #tables_div = soup.find("div", class_="tables")
                             results = (
                                 soup.find_all("div", class_="result")
                                 if soup
                                 else []
                             )
+                            print(f"\nresult: {len(results)}")    
                             for result in results:
                                 try:
                                     url, date, resolution = getUrlInfo(result)
@@ -131,6 +154,8 @@ class UpdateSource:
                                 except Exception as e:
                                     print(f"Error on result {result}: {e}")
                                     continue
+                            if len(results) < 32:
+                                break
                         except Exception as e:
                             traceback.print_exc()
                             print(f"Error on page {page}: {e}")
