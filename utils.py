@@ -10,7 +10,10 @@ import datetime
 import os
 import urllib.parse
 import ipaddress
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin, quote, unquote
+import m3u8
+import requests
+import traceback
 
 
 def getChannelItems():
@@ -115,24 +118,49 @@ def getUrlInfo(result):
     return url, date, resolution
 
 
+# async def getSpeed(url):
+#     async with aiohttp.ClientSession() as session:
+#         start = time.time()
+#         try:
+#             async with session.get(url, timeout=5) as response:
+#                 resStatus = response.status
+#         except:
+#             return float("inf")
+#         end = time.time()
+#         if resStatus == 200:
+#             return int(round((end - start) * 1000))
+#         else:
+#             return float("inf")
+
+async def load_m3u8_async(url, timeout):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, m3u8.load, url, timeout)
+
 async def getSpeed(url):
-    """
-    Get the speed of the url
-    """
-    async with aiohttp.ClientSession() as session:
-        start = time.time()
-        try:
-            async with session.get(url, timeout=5) as response:
-                resStatus = response.status
-        except:
-            return float("inf")
-        end = time.time()
-        if resStatus == 200:
-            return int(round((end - start) * 1000))
-        else:
-            return float("inf")
-
-
+    if "$" in url:
+        url = url.split('$')[0]
+    url = quote(url, safe=':/?&=$')
+    start = time.time()
+    try:
+        if ".php" not in url and ".m3u8" not in url:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=5) as response:
+                    end = time.time()
+                    if response.status == 200:
+                        return int(round((end - start) * 1000))
+        elif ".m3u8" in url:
+            playlist = await load_m3u8_async(url, timeout=5)
+            ts_url = playlist.segments.uri[0]
+            url = urljoin(url, ts_url).strip()
+            async with aiohttp.ClientSession() as session:
+                async with session.head(url, timeout=5) as res:
+                    end = time.time()
+                    if res.status == 200:
+                        return int(round((end - start) * 1000))
+        return float("inf")
+    except Exception:
+        return float("inf")
+        
 async def compareSpeedAndResolution(infoList):
     """
     Sort by speed and resolution
@@ -271,12 +299,9 @@ def filterUrlsByPatterns(urls):
 
 
 def is_match_url(url):
-    url_match = re.search(
-        r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
-        url,
-    )
+    url_match = url.strip().startswith("http")
     if url_match:
-        return True, url_match.group()
+        return True, url.strip()
     return False, None
 
 
