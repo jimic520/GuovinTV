@@ -141,7 +141,7 @@ async def check_stream_speed(ts_url):
         if video_streams:
             width = video_streams[0]['width']
             height = video_streams[0]['height']
-            print(f"{input_url}-视频分辨率: {width}x{height}")
+            print(f"{ts_url}-视频分辨率: {width}x{height}")
             end = time.time()
             return int(round((end - start) * 1000))
         else:
