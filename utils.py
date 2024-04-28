@@ -14,6 +14,7 @@ from urllib.parse import urlparse, urljoin, quote, unquote
 import m3u8
 import requests
 import ffmpeg
+import traceback
 
 
 def getChannelItems():
@@ -140,11 +141,11 @@ async def check_stream_speed(ts_url):
         if video_streams:
             width = video_streams[0]['width']
             height = video_streams[0]['height']
-            #print(f"{input_url}-视频分辨率: {width}x{height}")
+            print(f"{input_url}-视频分辨率: {width}x{height}")
             end = time.time()
             return int(round((end - start) * 1000))
         else:
-            #print("无法获取视频流信息")
+            print("无法获取视频流信息")
             return float("inf")
     except Exception:
         return float("inf")
@@ -176,6 +177,7 @@ async def getSpeed(url):
                         return speed
         return float("inf")
     except Exception:
+        traceback.print_exc()
         return float("inf")
         
 async def compareSpeedAndResolution(infoList):
