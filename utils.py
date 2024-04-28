@@ -177,7 +177,7 @@ async def getSpeed(url):
                         return speed
         return float("inf")
     except Exception:
-        traceback.print_exc()
+        #traceback.print_exc()
         return float("inf")
         
 async def compareSpeedAndResolution(infoList):
