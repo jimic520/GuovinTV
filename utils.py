@@ -13,7 +13,7 @@ import ipaddress
 from urllib.parse import urlparse, urljoin, quote, unquote
 import m3u8
 import requests
-import traceback
+import ffmpeg
 
 
 def getChannelItems():
@@ -132,6 +132,23 @@ def getUrlInfo(result):
 #         else:
 #             return float("inf")
 
+async def check_stream_speed(ts_url):
+    try:
+        start = time.time()
+        probe = await asyncio.get_event_loop().run_in_executor(None, ffmpeg.probe, ts_url)
+        video_streams = [stream for stream in probe['streams'] if stream['codec_type'] == 'video']
+        if video_streams:
+            width = video_streams[0]['width']
+            height = video_streams[0]['height']
+            #print(f"{input_url}-视频分辨率: {width}x{height}")
+            end = time.time()
+            return int(round((end - start) * 1000))
+        else:
+            #print("无法获取视频流信息")
+            return float("inf")
+    except Exception:
+        return float("inf")
+
 async def load_m3u8_async(url, timeout):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, m3u8.load, url, timeout)
@@ -139,7 +156,7 @@ async def load_m3u8_async(url, timeout):
 async def getSpeed(url):
     if "$" in url:
         url = url.split('$')[0]
-    url = quote(url, safe=':/?&=$')
+    url = quote(url, safe=':/?&=$[]')
     start = time.time()
     try:
         if ".php" not in url and ".m3u8" not in url:
@@ -148,15 +165,15 @@ async def getSpeed(url):
                     end = time.time()
                     if response.status == 200:
                         return int(round((end - start) * 1000))
-        elif ".m3u8" in url:
+        elif ".m3u8" in url or ".php" in url:
             playlist = await load_m3u8_async(url, timeout=5)
-            ts_url = playlist.segments.uri[0]
-            url = urljoin(url, ts_url).strip()
+            ts_uri = playlist.segments.uri[0]
+            ts_url = urljoin(url, ts_uri).strip()
             async with aiohttp.ClientSession() as session:
-                async with session.head(url, timeout=5) as res:
-                    end = time.time()
+                async with session.head(ts_url, timeout=5) as res:
                     if res.status == 200:
-                        return int(round((end - start) * 1000))
+                        speed = await check_stream_speed(ts_url)
+                        return speed
         return float("inf")
     except Exception:
         return float("inf")
