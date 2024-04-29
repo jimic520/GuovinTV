@@ -150,7 +150,9 @@ async def check_stream_speed(url_info):
             url = os.getenv("ipv6_proxy") + quote(url_info[0])
             response = requests.get(url)
             if response.status_code == 200:
-                url_info[0] = url_info[0] + f"$1920x1080|ipv6"
+                if not url_info[2]:
+                    url_info[2] = '1920x1080'
+                url_info[0] = url_info[0] + f"${url_info[2]}|ipv6"
                 return 1
             else:
                 return float("inf")
