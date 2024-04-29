@@ -2,7 +2,7 @@ import re
 import traceback
 from ftplib import FTP
 import requests
-
+from collections import Counter
 try:
     import user_config as config
 except ImportError:
@@ -76,6 +76,32 @@ def get_search_key():
         traceback.print_exc()
         return "s"
 
+def get_result_class():
+    try:
+        page_url = f"http://tonkiang.us/?page=1&ch=cctv"
+        response = requests.get(page_url, headers=headers)
+        response.encoding = "UTF-8"
+        soup = BeautifulSoup(response.text, "html.parser")
+        div_classes = []
+        for div in soup.find_all('div'):
+            classes = div.get('class')
+            if classes:
+                div_classes.extend(classes)
+        class_counter = Counter(div_classes)
+        classes_over_30 = [class_name for class_name, count in class_counter.items() if count >= 30]
+        for cls in classes_over_30:
+            cls_txt = soup.find_all("div", class_=cls)[1].get_text()
+            if "cctv" in cls_txt and "http" in cls_txt:
+                return cls
+        return classes_over_30[0]
+    except Exception:
+        traceback.print_exc()
+        return "result"
+
+
+s_key = get_search_key()
+result_class = get_result_class()
+
 class UpdateSource:
 
     def __init__(self, callback=None):
@@ -87,10 +113,13 @@ class UpdateSource:
         crawl_result_dict = {}
         if config.crawl_type in ["2", "3"]:
             for conf_url in config.crawl_urls:
-                if conf_url.strip().startswith("http:"):
-                    crawl_response = requests.get(conf_url.strip(), verify=False)
-                else:
-                    crawl_response = requests.get(conf_url.strip())
+                try:
+                    if conf_url.strip().startswith("http:"):
+                        crawl_response = requests.get(conf_url.strip(), verify=False)
+                    else:
+                        crawl_response = requests.get(conf_url.strip())
+                except Exception:
+                    continue
                 crawl_response.encoding = 'utf-8'
                 if crawl_response.status_code != 200:
                     continue
@@ -126,7 +155,6 @@ class UpdateSource:
                 infoList = []
                 if config.crawl_type in ["1", "3"]:
                     cookies = ""
-                    s_key = get_search_key()
                     for page in range(1, pageNum + 1):
                         try:
                             page_url = f"http://tonkiang.us/?page={page}&{s_key}={name}"
@@ -136,11 +164,12 @@ class UpdateSource:
                             soup = BeautifulSoup(response.text, "html.parser")
                             #tables_div = soup.find("div", class_="tables")
                             results = (
-                                soup.find_all("div", class_="result")
+                                soup.find_all("div", class_=result_class)
                                 if soup
                                 else []
                             )
-                            print(f"\nresult: {len(results)}")    
+                            if not results:
+                                print(f"result len: 0")
                             for result in results:
                                 try:
                                     url, date, resolution = getUrlInfo(result)
@@ -150,7 +179,7 @@ class UpdateSource:
                                             and checkByDomainBlacklist(url)
                                             and checkByURLKeywordsBlacklist(url)
                                     ):
-                                        infoList.append((url, date, resolution))
+                                        infoList.append([url, date, None])
                                 except Exception as e:
                                     print(f"Error on result {result}: {e}")
                                     continue
@@ -172,7 +201,7 @@ class UpdateSource:
                                 continue
                             if not checkByURLKeywordsBlacklist(tv_url):
                                 continue
-                            infoList.append((tv_url, None, None))
+                            infoList.append([tv_url, None, None])
                 try:
                     sorted_data = await compareSpeedAndResolution(infoList)
                     if sorted_data:
