@@ -179,7 +179,7 @@ class UpdateSource:
                                             and checkByDomainBlacklist(url)
                                             and checkByURLKeywordsBlacklist(url)
                                     ):
-                                        infoList.append([url, date, None])
+                                        infoList.append([url, date, resolution])
                                 except Exception as e:
                                     print(f"Error on result {result}: {e}")
                                     continue
