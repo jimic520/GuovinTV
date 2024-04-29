@@ -1,3 +1,6 @@
+import json
+import subprocess
+import traceback
 try:
     import user_config as config
 except ImportError:
@@ -10,12 +13,13 @@ import datetime
 import os
 import urllib.parse
 import ipaddress
-from urllib.parse import urlparse, urljoin, quote, unquote
+from urllib.parse import urlparse, urljoin, quote
 import m3u8
-import requests
-import ffmpeg
-import traceback
 
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 def getChannelItems():
     """
@@ -133,58 +137,52 @@ def getUrlInfo(result):
 #         else:
 #             return float("inf")
 
-async def check_stream_speed(ts_url):
+async def check_stream_speed(url_info):
+    start = time.time()
     try:
-        start = time.time()
-        probe = await asyncio.get_event_loop().run_in_executor(None, ffmpeg.probe, ts_url)
-        video_streams = [stream for stream in probe['streams'] if stream['codec_type'] == 'video']
+        ffprobe = await asyncio.get_event_loop().run_in_executor(None, ffmpeg_probe, url_info[0], 15)
+        if ffprobe is None:
+            return float("inf")
+        video_streams = [stream for stream in ffprobe['streams'] if stream['codec_type'] == 'video']
         if video_streams:
             width = video_streams[0]['width']
             height = video_streams[0]['height']
-            print(f"{ts_url}-视频分辨率: {width}x{height}")
+            if is_ipv6(url_info[0]):
+                url_info[0] = url_info[0] + f"{url_info[0]}${width}x{height}|ipv6"
+            else:
+                url_info[0] = f"{url_info[0]}${width}x{height}"
+            url_info[2] = f"{width}x{height}"
             end = time.time()
             return int(round((end - start) * 1000))
         else:
-            print("无法获取视频流信息")
             return float("inf")
-    except Exception:
+    except Exception as e:
+        #traceback.print_exc()
+        print(e)
         return float("inf")
+        
 
 async def load_m3u8_async(url, timeout):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, m3u8.load, url, timeout)
 
-async def getSpeed(url):
+async def getSpeed(url_info):
+    url, _, _ = url_info
     if "$" in url:
         url = url.split('$')[0]
     url = quote(url, safe=':/?&=$[]')
     start = time.time()
     try:
-        if ".php" not in url and ".m3u8" not in url:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=5) as response:
-                    end = time.time()
-                    if response.status == 200:
-                        return int(round((end - start) * 1000))
-        elif ".m3u8" in url or ".php" in url:
-            playlist = await load_m3u8_async(url, timeout=5)
-            ts_uri = playlist.segments.uri[0]
-            ts_url = urljoin(url, ts_uri).strip()
-            async with aiohttp.ClientSession() as session:
-                async with session.head(ts_url, timeout=5) as res:
-                    if res.status == 200:
-                        speed = await check_stream_speed(ts_url)
-                        return speed
-        return float("inf")
+        speed = await check_stream_speed(url_info)
+        return speed
     except Exception:
-        #traceback.print_exc()
         return float("inf")
         
 async def compareSpeedAndResolution(infoList):
     """
     Sort by speed and resolution
     """
-    response_times = await asyncio.gather(*(getSpeed(url) for url, _, _ in infoList))
+    response_times = await asyncio.gather(*(getSpeed(url_info) for url_info in infoList))
     valid_responses = [
         (info, rt) for info, rt in zip(infoList, response_times) if rt != float("inf")
     ]
@@ -331,3 +329,63 @@ def filter_CCTV_key(key: str):
     filtered_text = chinese_pattern.sub('', key)  # 使用 sub 方法替换中文字符为空字符串
     result = re.sub(r'\[\d+\*\d+\]', '', filtered_text)
     return result.strip()
+
+
+
+def convert_kwargs_to_cmd_line_args(kwargs):
+    """Helper function to build command line arguments out of dict."""
+    args = []
+    for k in sorted(kwargs.keys()):
+        v = kwargs[k]
+        if isinstance(v, Iterable) and not isinstance(v, str):
+            for value in v:
+                args.append('-{}'.format(k))
+                if value is not None:
+                    args.append('{}'.format(value))
+            continue
+        args.append('-{}'.format(k))
+        if v is not None:
+            args.append('{}'.format(v))
+    return args
+
+
+def convert_kwargs_to_cmd_line_args(kwargs):
+    """Helper function to build command line arguments out of dict."""
+    args = []
+    for k in sorted(kwargs.keys()):
+        v = kwargs[k]
+        if isinstance(v, Iterable) and not isinstance(v, str):
+            for value in v:
+                args.append('-{}'.format(k))
+                if value is not None:
+                    args.append('{}'.format(value))
+            continue
+        args.append('-{}'.format(k))
+        if v is not None:
+            args.append('{}'.format(v))
+    return args
+
+
+def ffmpeg_probe(filename, timeout, cmd='ffprobe', **kwargs):
+    """Run ffprobe on the specified file and return a JSON representation of the output.
+
+    Raises:
+        :class:`ffmpeg.Error`: if ffprobe returns a non-zero exit code,
+            an :class:`Error` is returned with a generic error message.
+            The stderr output can be retrieved by accessing the
+            ``stderr`` property of the exception.
+    """
+    args = [cmd, '-show_format', '-show_streams', '-of', 'json']
+    args += convert_kwargs_to_cmd_line_args(kwargs)
+    args += [filename]
+    try:
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        communicate_kwargs = {}
+        if timeout is not None:
+            communicate_kwargs['timeout'] = timeout
+        out, err = p.communicate(**communicate_kwargs)
+        if p.returncode != 0:
+            return None
+        return json.loads(out.decode('utf-8'))
+    except Exception:
+        return None
