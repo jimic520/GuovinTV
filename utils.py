@@ -2,6 +2,8 @@ import json
 import subprocess
 import traceback
 
+import requests
+
 try:
     import user_config as config
 except ImportError:
@@ -89,6 +91,8 @@ def updateFile(final_file, old_file):
     Update the file
     """
     if os.path.exists(old_file):
+        if os.path.exists(final_file):
+            os.remove(final_file)
         os.replace(old_file, final_file)
 
 
@@ -140,28 +144,30 @@ def getUrlInfo(result):
 #             return float("inf")
 
 async def check_stream_speed(url_info):
-    is_v6 = is_ipv6(url_info[0])
-    if is_v6 and os.getenv("ipv6_proxy"):
-        url = os.getenv("ipv6_proxy") + quote(url_info[0])
-    else:
-        url = url_info[0]
-    print(url)
-    start = time.time()
     try:
+        is_v6 = is_ipv6(url_info[0])
+        if is_v6 and os.getenv("ipv6_proxy"):
+            url = os.getenv("ipv6_proxy") + quote(url_info[0])
+            response = requests.get(url)
+            if response.status_code == 200:
+                url_info[0] = url_info[0] + f"$1920x1080"
+                url_info[2] = "1920x1080"
+                return 1
+            else:
+                return float("inf")
+        else:
+            url = url_info[0]
+        start = time.time()
         ffprobe = await asyncio.get_event_loop().run_in_executor(None, ffmpeg_probe, url, 15)
-        print("==============================")
-        print(ffprobe)
-        print("==============================")
         if ffprobe is None:
             return float("inf")
         video_streams = [stream for stream in ffprobe['streams'] if stream['codec_type'] == 'video']
         if video_streams:
             width = video_streams[0]['width']
             height = video_streams[0]['height']
-            if is_ipv6(url_info[0]):
-                url_info[0] = url_info[0] + f"{url_info[0]}${width}x{height}|ipv6"
-            else:
-                url_info[0] = f"{url_info[0]}${width}x{height}"
+            url_info[0] = url_info[0] + f"${width}x{height}"
+            if is_v6:
+                url_info[0] = url_info[0] + "|ipv6"
             url_info[2] = f"{width}x{height}"
             end = time.time()
             return int(round((end - start) * 1000))
