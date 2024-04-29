@@ -145,9 +145,13 @@ async def check_stream_speed(url_info):
         url = os.getenv("ipv6_proxy") + quote(url_info[0])
     else:
         url = url_info[0]
+    print(url)
     start = time.time()
     try:
         ffprobe = await asyncio.get_event_loop().run_in_executor(None, ffmpeg_probe, url, 15)
+        print("==============================")
+        print(ffprobe)
+        print("==============================")
         if ffprobe is None:
             return float("inf")
         video_streams = [stream for stream in ffprobe['streams'] if stream['codec_type'] == 'video']
