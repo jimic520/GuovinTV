@@ -151,7 +151,6 @@ async def check_stream_speed(url_info):
             response = requests.get(url)
             if response.status_code == 200:
                 url_info[0] = url_info[0] + f"$1920x1080|ipv6"
-                url_info[2] = "1920x1080"
                 return 1
             else:
                 return float("inf")
