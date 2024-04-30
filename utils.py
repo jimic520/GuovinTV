@@ -17,7 +17,6 @@ import os
 import urllib.parse
 import ipaddress
 from urllib.parse import urlparse, urljoin, quote
-import m3u8
 
 try:
     from collections.abc import Iterable
@@ -164,11 +163,11 @@ async def check_stream_speed(url_info):
             return float("inf")
         video_streams = [stream for stream in ffprobe['streams'] if stream['codec_type'] == 'video']
         if video_streams:
+            width = video_streams[0]['width']
+            height = video_streams[0]['height']
             print("***************************")
             print(f"{width}x{height}")
             print("***************************")
-            width = video_streams[0]['width']
-            height = video_streams[0]['height']
             url_info[0] = url_info[0] + f"${width}x{height}"
             if is_v6:
                 url_info[0] = url_info[0] + "|ipv6"
@@ -183,16 +182,12 @@ async def check_stream_speed(url_info):
         return float("inf")
 
 
-async def load_m3u8_async(url, timeout):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, m3u8.load, url, timeout)
-
-
 async def getSpeed(url_info):
     url, _, _ = url_info
     if "$" in url:
         url = url.split('$')[0]
     url = quote(url, safe=':/?&=$[]')
+    url_info[0] = url
     try:
         speed = await check_stream_speed(url_info)
         return speed
@@ -204,7 +199,7 @@ async def compareSpeedAndResolution(infoList):
     """
     Sort by speed and resolution
     """
-    response_times = await asyncio.gather(*(getSpeed(url_info) for url_info in infoList))
+    response_times = await asyncio.gather(*[getSpeed(url_info) for url_info in infoList])
     valid_responses = [
         (info, rt) for info, rt in zip(infoList, response_times) if rt != float("inf")
     ]
