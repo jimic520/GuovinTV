@@ -164,6 +164,9 @@ async def check_stream_speed(url_info):
             return float("inf")
         video_streams = [stream for stream in ffprobe['streams'] if stream['codec_type'] == 'video']
         if video_streams:
+            print("***************************")
+            print(f"{width}x{height}")
+            print("***************************")
             width = video_streams[0]['width']
             height = video_streams[0]['height']
             url_info[0] = url_info[0] + f"${width}x{height}"
@@ -396,6 +399,7 @@ def ffmpeg_probe(filename, timeout, cmd='ffprobe', **kwargs):
     args = [cmd, '-show_format', '-show_streams', '-of', 'json']
     args += convert_kwargs_to_cmd_line_args(kwargs)
     args += [filename]
+    p = None
     try:
         p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         communicate_kwargs = {}
@@ -406,4 +410,16 @@ def ffmpeg_probe(filename, timeout, cmd='ffprobe', **kwargs):
             return None
         return json.loads(out.decode('utf-8'))
     except Exception:
+        #traceback.print_exc()
         return None
+    finally:
+        graceful_exit(p)
+
+def graceful_exit(process):
+    if process is None:
+        return
+    try:
+        process.terminate()
+        process.wait(timeout=1)
+    except subprocess.TimeoutExpired:
+        process.kill()
